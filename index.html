@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>１日の生活リズム</title>
+<style>
+        /* --- [設定エリア：見た目の微調整] --- */
+        :root {
+            --handle-size: 14px; /* ここを大きくすると白丸が大きくなります */
+            --handle-color: #ffffff;
+            --handle-border: #4a3728;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #f3eedf;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 5px;
+            color: #5d4037;
+        }
+
+        .instruction {
+            font-size: 11px;
+            color: #6d4c41;
+            margin-bottom: 15px;
+            text-align: center;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            line-height: 1.6;
+            max-width: 580px;
+        }
+
+        .container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            background-color: #fdfaf2;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .clock-board {
+            position: relative;
+            width: 520px;
+            height: 520px;
+        }
+
+        .svg-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: rotate(-90deg);
+            z-index: 1;
+        }
+
+        .numeric-layer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .hour-label {
+            position: absolute;
+            font-weight: bold;
+            font-size: 16px;
+            color: #4a3728;
+            transform: translate(-50%, -50%);
+            text-shadow: 1px 1px 0px #fff, -1px -1px 0px #fff, 1px -1px 0px #fff, -1px 1px 0px #fff;
+        }
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 170px;
+            height: 170px;
+            background-color: #fff;
+            border-radius: 50%;
+            border: 4px solid #cbbba0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .center-top {
+            flex: 1;
+            background-color: #a3937b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            color: #fff;
+            padding-bottom: 5px;
+        }
+        .center-bottom {
+            flex: 1;
+            background-color: #eaddc3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            color: #5d4037;
+            padding-top: 5px;
+        }
+
+        .icon-moon { font-size: 32px; transform: rotate(-10deg); }
+        .icon-house { font-size: 30px; }
+        .icon-sun { font-size: 34px; }
+        .icon-school { font-size: 30px; }
+
+        .labels-layer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        .schedule-text {
+            position: absolute;
+            font-weight: bold;
+            font-size: 13px;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8), 1px -1px 2px rgba(0,0,0,0.8), -1px 1px 2px rgba(0,0,0,0.8);
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        .text-dark {
+            color: #222;
+            text-shadow: 1px 1px 2px #fff, -1px -1px 2px #fff, 1px -1px 2px #fff, -1px 1px 2px #fff;
+        }
+
+        .handles-layer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #fff;
+            border: 3px solid #4a3728;
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            touch-action: none;
+            pointer-events: auto;
+        }
+        .handle:hover, .handle.dragging {
+            transform: translate(-50%, -50%) scale(1.3);
+            background-color: #ffeb3b;
+        }
+
+        .swapping {
+            opacity: 0.4;
+        }
+
+        .modal {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            z-index: 100;
+            width: 270px;
+            border: 3px solid #cbbba0;
+        }
+
+        .modal h3 {
+            margin-top: 0;
+            font-size: 14px;
+            color: #5d4037;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .modal-options {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 320px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .modal-btn {
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            background-color: #f0f0f0;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .color-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .close-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 6px;
+            background: #9e9e9e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🕒 １日の生活リズム</h1>
+    <div class="instruction">
+        <strong>【時間の伸縮】</strong> 【〇】をうごかす<br>
+        <strong>【活動の移動（順序変更）】</strong> タップしてそのまま動かす<br>
+        <strong>【追加・削除】</strong> 【ダブルタップ】で追加、【長押し】で消す。
+    </div>
+
+    <div class="container">
+        <div class="clock-board" id="clock-board">
+            
+            <svg class="svg-container" viewBox="0 0 520 520" id="svg-element">
+                <circle cx="260" cy="260" r="176" fill="none" stroke="#dbd3c2" stroke-width="2"/>
+                <g id="sectors-group"></g>
+            </svg>
+
+            <div class="center-circle">
+                <div class="center-top">
+                    <span class="icon-moon">🌙</span>
+                    <span class="icon-house">🏡</span>
+                </div>
+                <div class="center-bottom">
+                    <span class="icon-sun">☀️</span>
+                    <span class="icon-school">🏫</span>
+                </div>
+            </div>
+
+            <div id="labels-container" class="labels-layer"></div>
+            <div id="handles-container" class="handles-layer"></div>
+            <div id="numeric-labels-container" class="numeric-layer"></div>
+
+        </div>
+    </div>
+
+    <div class="modal" id="activity-modal">
+        <h3>新しい活動の枠を挿入する</h3>
+        <div class="modal-options">
+            <button class="modal-btn" onclick="insertNewActivity('すいみん', '#4776ad')"><span>すいみん</span><span class="color-box" style="background:#4776ad;"></span></button>
+            <button class="modal-btn" onclick="insertNewActivity('あさごはん', '#e67e22')"><span>あさごはん</span><span class="color-box" style="background:#e67e22;"></span></button>
+            <button class="modal-btn" onclick="insertNewActivity('テレビ', '#663399')"><span>テレビ</span><span class="color-box" style="background:#663399;"></span></button>
+            <button class="modal-btn" onclick="insertNewActivity('夕食', '#2ecc71')"><span>夕食</span><span class="color-box" style="background:#2ecc71;"></span></button>
+            <button class="modal-btn" onclick="insertNewActivity('ゲーム', '#b92b77')"><span>ゲーム</span><span class="color-box" style="background:#b92b77;"></span></button>
+            <button class="modal-btn" onclick="insertNewActivity('おふろ', '#5bc0de')"><span>おふろ</span><span class="color-box" style="background:#5bc0de;"></span></button>
+            <button class="modal-btn" onclick="insertNewActivity('明日のじゅんび', '#f1c40f')"><span class="text-dark">明日のじゅんび</span><span class="color-box" style="background:#f1c40f;"></span></button>
+            <button class="modal-btn" onclick="insertNewActivity('あそび', '#95a5a6')"><span>あそび</span><span class="color-box" style="background:#95a5a6;"></span></button>
+            <button class="modal-btn" onclick="insertNewActivity('その他', '#e74c3c')"><span>その他</span><span class="color-box" style="background:#e74c3c;"></span></button>
+        </div>
+        <button class="close-btn" onclick="closeModal()">キャンセル</button>
+    </div>
+
+    <script>
+        function t(h, m) { return h * 60 + m; }
+
+        let schedule = [
+            { name: "すいみん", dur: 445, color: "#4776ad" },
+            { name: "したく・登校", dur: 45, color: "#cbd154" },
+            { name: "学校", dur: 455, color: "#1e824c" },
+            { name: "下校・外遊び", dur: 120, color: "#d35400" },
+            { name: "宿題", dur: 45, color: "#663399" },
+            { name: "夕食", dur: 45, color: "#2ecc71" },
+            { name: "テレビ", dur: 90, color: "#b92b77" },
+            { name: "おふろ", dur: 30, color: "#5bc0de" },
+            { name: "ゲーム", dur: 165, color: "#b92b77" }
+        ];
+
+        // ✨ 変更点：開始時刻を変数として保持し、動かせるようにしました
+        let globalStart = t(23, 45); 
+
+        function refreshAbsoluteTimes() {
+            let currentStart = globalStart; 
+            schedule.forEach(item => {
+                item.start = currentStart;
+                item.end = (currentStart + item.dur) % 1440;
+                currentStart = item.end;
+            });
+        }
+
+        const board = document.getElementById('clock-board');
+        const sectorsGroup = document.getElementById('sectors-group');
+        const labelsContainer = document.getElementById('labels-container');
+        const handlesContainer = document.getElementById('handles-container');
+        const numericContainer = document.getElementById('numeric-labels-container');
+        const modal = document.getElementById('activity-modal');
+
+        let activeTargetIndex = null;
+        let longPressTimer = null;
+
+        function deployNumericLabels() {
+            numericContainer.innerHTML = "";
+            const radius = 242;
+            const center = 260;
+            for (let hour = 0; hour < 24; hour++) {
+                let angle = (hour * 15 - 90) * (Math.PI / 180);
+                let x = center + radius * Math.cos(angle);
+                let y = center + radius * Math.sin(angle);
+                let div = document.createElement('div');
+                div.className = 'hour-label';
+                div.style.left = x + 'px';
+                div.style.top = y + 'px';
+                let displayHour = hour === 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+                div.innerText = displayHour;
+                numericContainer.appendChild(div);
+            }
+        }
+
+        function getCoordinatesForPercent(percent, radius) {
+            return [
+                260 + radius * Math.cos(2 * Math.PI * percent),
+                260 + radius * Math.sin(2 * Math.PI * percent)
+            ];
+        }
+
+        function getDuration(start, end) {
+            if (end >= start) return end - start;
+            return (1440 - start) + end;
+        }
+
+        function getMinutesFromCoordinates(clientX, clientY) {
+            let rect = board.getBoundingClientRect();
+            let centerX = rect.left + rect.width / 2;
+            let centerY = rect.top + rect.height / 2;
+            let angle = Math.atan2(clientY - centerY, clientX - centerX);
+            let degrees = angle * (180 / Math.PI) + 90;
+            if (degrees < 0) degrees += 360;
+            let mins = Math.round((degrees / 360) * 1440);
+            return mins >= 1440 ? 0 : mins;
+        }
+
+        function getIndexAtMinutes(mins) {
+            for (let i = 0; i < schedule.length; i++) {
+                let s = schedule[i].start;
+                let e = schedule[i].end;
+                if (s < e) {
+                    if (mins >= s && mins < e) return i;
+                } else {
+                    if (mins >= s || mins < e) return i;
+                }
+            }
+            return -1;
+        }
+
+        function renderChart() {
+            refreshAbsoluteTimes();
+            sectorsGroup.innerHTML = "";
+            labelsContainer.innerHTML = "";
+            handlesContainer.innerHTML = "";
+
+            const center = 260;
+            const r = 176;
+
+            schedule.forEach((item, index) => {
+                let duration = item.dur;
+                if (duration <= 0) return;
+
+                let segments = [];
+                if (item.start > item.end) {
+                    segments.push({ s: item.start, e: 1440 });
+                    segments.push({ s: 0, e: item.end });
+                } else {
+                    segments.push({ s: item.start, e: item.end });
+                }
+
+                segments.forEach(seg => {
+                    let startPct = seg.s / 1440;
+                    let endPct = seg.e / 1440;
+                    const [startX, startY] = getCoordinatesForPercent(startPct, r);
+                    const [endX, endY] = getCoordinatesForPercent(endPct, r);
+                    const largeArcFlag = (endPct - startPct) > 0.5 ? 1 : 0;
+                    
+                    let d = `M ${startX} ${startY} A ${r} ${r} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
+                    if (seg.s === 0 && seg.e === 1440) {
+                        d = `M 260 ${260-r} A ${r} ${r} 0 1 1 259.99 ${260-r} Z`;
+                    }
+
+                    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    path.setAttribute("d", d);
+                    path.setAttribute("fill", "none");
+                    path.setAttribute("stroke", item.color);
+                    path.setAttribute("stroke-width", "110");
+                    path.style.cursor = "grab";
+
+                    path.addEventListener('dblclick', (e) => {
+                        e.stopPropagation(); e.preventDefault(); openModal(index);
+                    });
+
+                    let dragStarted = false;
+                    let initialX = 0, initialY = 0;
+
+                    const onMove = (me) => {
+                        let cx = me.clientX || (me.touches && me.touches[0].clientX);
+                        let cy = me.clientY || (me.touches && me.touches[0].clientY);
+                        if (!dragStarted) {
+                            if (Math.abs(cx - initialX) > 8 || Math.abs(cy - initialY) > 8) {
+                                dragStarted = true;
+                                path.classList.add('swapping');
+                                if (longPressTimer) clearTimeout(longPressTimer);
+                            }
+                        }
+                    };
+
+                    const onEnd = (ee) => {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onEnd);
+                        window.removeEventListener('touchmove', onMove);
+                        window.removeEventListener('touchend', onEnd);
+                        if (longPressTimer) clearTimeout(longPressTimer);
+
+                        if (dragStarted) {
+                            path.classList.remove('swapping');
+                            let endX = ee.clientX || (ee.changedTouches && ee.changedTouches[0].clientX);
+                            let endY = ee.clientY || (ee.changedTouches && ee.changedTouches[0].clientY);
+                            let currentMins = getMinutesFromCoordinates(endX, endY);
+                            let targetIdx = getIndexAtMinutes(currentMins);
+
+                            if (targetIdx !== -1 && targetIdx !== index) {
+                                let movingItem = schedule.splice(index, 1)[0];
+                                schedule.splice(targetIdx, 0, movingItem);
+                                renderChart();
+                            }
+                        }
+                    };
+
+                    const startPress = (e) => {
+                        initialX = e.clientX || (e.touches && e.touches[0].clientX);
+                        initialY = e.clientY || (e.touches && e.touches[0].clientY);
+                        dragStarted = false;
+
+                        longPressTimer = setTimeout(() => {
+                            if (!dragStarted) {
+                                deleteActivity(index);
+                            }
+                        }, 800);
+
+                        window.addEventListener('mousemove', onMove);
+                        window.addEventListener('mouseup', onEnd);
+                        window.addEventListener('touchmove', onMove, { passive: true });
+                        window.addEventListener('touchend', onEnd);
+                    };
+
+                    path.addEventListener('mousedown', startPress);
+                    path.addEventListener('touchstart', startPress, { passive: true });
+
+                    sectorsGroup.appendChild(path);
+                });
+
+                let midMin = item.start + duration / 2;
+                if (midMin >= 1440) midMin -= 1440;
+                let midPct = midMin / 1440;
+
+                let textAngle = (midPct * 360 - 90) * (Math.PI / 180);
+                let tx = center + 175 * Math.cos(textAngle);
+                let ty = center + 175 * Math.sin(textAngle);
+
+                let label = document.createElement('div');
+                label.className = 'schedule-text';
+                if (["したく・登校", "夕食", "あさごはん", "学校", "つぎの日の準備"].includes(item.name)) {
+                    label.classList.add('text-dark');
+                }
+                label.style.left = tx + 'px';
+                label.style.top = ty + 'px';
+                label.innerText = item.name;
+                
+                if (duration < 30) label.style.fontSize = '10px';
+                if (duration >= 20) labelsContainer.appendChild(label);
+
+                let handlePct = item.end / 1440;
+                let handleAngle = (handlePct * 360 - 90) * (Math.PI / 180);
+                let hx = center + 176 * Math.cos(handleAngle);
+                let hy = center + 176 * Math.sin(handleAngle);
+
+                let handle = document.createElement('div');
+                handle.className = 'handle';
+                handle.style.left = hx + 'px';
+                handle.style.top = hy + 'px';
+
+                setupDragEvent(handle, index);
+                handlesContainer.appendChild(handle);
+            });
+        }
+
+        function setupDragEvent(handle, index) {
+            function moveHandler(e) {
+                e.preventDefault();
+                let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                let targetMin = getMinutesFromCoordinates(clientX, clientY);
+                targetMin = Math.round(targetMin / 15) * 15;
+                if (targetMin >= 1440) targetMin = 0;
+
+                let nextIndex = (index + 1) % schedule.length;
+                
+                let currentStart = schedule[index].start;
+                let nextEnd = schedule[nextIndex].end;
+
+                let newCurrentDur = getDuration(currentStart, targetMin);
+                let newNextDur = getDuration(targetMin, nextEnd);
+
+                if (newCurrentDur >= 15 && newNextDur >= 15) {
+                    schedule[index].dur = newCurrentDur;
+                    schedule[nextIndex].dur = newNextDur;
+                    
+                    // ✨ 変更点：一番最後の活動と最初の活動の間の境界を動かした時、全体の開始時刻を更新する
+                    if (index === schedule.length - 1) {
+                        globalStart = targetMin;
+                    }
+                    
+                    renderChart();
+                }
+            }
+
+            function stopHandler() {
+                handle.classList.remove('dragging');
+                window.removeEventListener('mousemove', moveHandler);
+                window.removeEventListener('mouseup', stopHandler);
+                window.removeEventListener('touchmove', moveHandler);
+                window.removeEventListener('touchend', stopHandler);
+            }
+
+            handle.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                handle.classList.add('dragging');
+                window.addEventListener('mousemove', moveHandler);
+                window.addEventListener('mouseup', stopHandler);
+            });
+
+            handle.addEventListener('touchstart', (e) => {
+                handle.classList.add('dragging');
+                window.addEventListener('touchmove', moveHandler, { passive: false });
+                window.addEventListener('touchend', stopHandler);
+            });
+        }
+
+        function openModal(index) {
+            activeTargetIndex = index;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+            activeTargetIndex = null;
+        }
+
+        function insertNewActivity(name, color) {
+            if (activeTargetIndex !== null) {
+                let target = schedule[activeTargetIndex];
+                if (target.dur > 45) {
+                    target.dur -= 30;
+                    schedule.splice(activeTargetIndex + 1, 0, {
+                        dur: 30,
+                        name: name,
+                        color: color
+                    });
+                } else {
+                    target.name = name;
+                    target.color = color;
+                }
+                renderChart();
+                closeModal();
+            }
+        }
+
+        function deleteActivity(index) {
+            if (schedule.length <= 1) return;
+            let removed = schedule[index];
+            let prevIndex = (index - 1 + schedule.length) % schedule.length;
+            schedule[prevIndex].dur += removed.dur;
+            
+            // ✨ 変更点：一番最初の活動を削除した時、スタート地点の時刻もずらす
+            if (index === 0) {
+                globalStart = (globalStart + removed.dur) % 1440;
+            }
+            
+            schedule.splice(index, 1);
+            renderChart();
+        }
+
+        document.getElementById('sectors-group').addEventListener('touchend', function(e) {
+            let now = new Date().getTime();
+            let lastTouch = this.lastTouch || 0;
+            let delta = now - lastTouch;
+            if (delta < 300 && delta > 0) {
+                let path = e.target;
+                if (path && path.tagName === 'path') {
+                    path.dispatchEvent(new Event('dblclick'));
+                }
+            }
+            this.lastTouch = now;
+        });
+
+        window.onload = function() {
+            deployNumericLabels();
+            renderChart();
+        };
+    </script>
+</body>
+</html>
