@@ -74,23 +74,23 @@ let startHourOffset = 0; // 全体の開始絶対時刻
 // ==========================================
 const badPresetRaw = [
     { name: 'すいみん',     start: '23:45', end: '07:30', color: '#4c73a4' },
-    { name: 'したく・登校', start: '07:30', end: '08:00', color: '#cca625' },
-    { name: '学校',         start: '08:00', end: '15:00', color: '#168344' },
-    { name: '下校・外遊び', start: '15:00', end: '17:00', color: '#b75c24' },
-    { name: '宿題',         start: '17:00', end: '17:30', color: '#592971' },
+    { name: 'したく・とうこう', start: '07:30', end: '08:00', color: '#cca625' },
+    { name: 'がっこう🏫',         start: '08:00', end: '15:00', color: '#168344', lock: true }, // ★絶対固定
+    { name: 'げこう・あそび', start: '15:00', end: '17:00', color: '#b75c24' },
+    { name: 'べんきょう',         start: '17:00', end: '17:30', color: '#592971' },
     { name: 'ゲーム',       start: '17:30', end: '19:00', color: '#9d226e' },
-    { name: '夕食',         start: '19:00', end: '19:30', color: '#3fa442' },
+    { name: 'ばんごはん',         start: '19:00', end: '19:30', color: '#3fa442' },
     { name: 'テレビ',       start: '19:30', end: '20:30', color: '#9d226e' },
-    { name: '入浴',         start: '20:30', end: '21:00', color: '#54a3aa' },
+    { name: 'おふろ',         start: '20:30', end: '21:00', color: '#54a3aa' },
     { name: 'ゲーム',       start: '21:00', end: '23:45', color: '#9d226e' }
 ];
 
 const goodPresetRaw = [
     { name: 'すいみん',     start: '21:00', end: '06:30', color: '#4c73a4' },
     { name: 'あさごはん',   start: '06:30', end: '07:00', color: '#3fa442' },
-    { name: 'したく・登校', start: '07:00', end: '08:00', color: '#cca625' },
-    { name: '学校',         start: '08:00', end: '15:00', color: '#168344' },
-    { name: '下校・外遊び', start: '15:00', end: '16:30', color: '#b75c24' },
+    { name: 'したく・とうこう', start: '07:00', end: '08:00', color: '#cca625' },
+    { name: 'がっこう🏫',         start: '08:00', end: '15:00', color: '#168344', lock: true }, // ★絶対固定
+    { name: 'げこう・あそび', start: '15:00', end: '16:30', color: '#b75c24' },
     { name: 'しゅくだい',   start: '16:30', end: '17:30', color: '#592971' },
     { name: 'ゆうはん',     start: '17:30', end: '18:30', color: '#3fa442' },
     { name: 'おふろ',       start: '18:30', end: '19:30', color: '#54a3aa' },
@@ -105,7 +105,7 @@ function convertRawToSchedules(rawList) {
         let endDec = eH + eM / 60;
         let duration = endDec - startDec;
         if (duration <= 0) duration += 24; 
-        return { name: item.name, duration: duration, color: item.color };
+        return { name: item.name, duration: duration, color: item.color, lock: item.lock || false };
     });
 }
 
@@ -119,8 +119,42 @@ function loadPreset(type) {
 
 loadPreset('bad');
 
+// ★【強力な安全装置】がっこう🏫の8:00〜15:00を何が何でも絶対死守する関数
+function forceFixSchoolTime() {
+    let schoolIdx = schedules.findIndex(s => s.lock);
+    if (schoolIdx === -1) return;
+
+    // 全体の合計時間を24時間に整える
+    let total = schedules.reduce((sum, s) => sum + s.duration, 0);
+    if (Math.abs(total - 24) > 0.01) {
+        // 24時間になっていないズレがあれば、がっこう🏫以外の最後の項目で微調整
+        let nonLockLastIdx = -1;
+        for (let i = schedules.length - 1; i >= 0; i--) {
+            if (!schedules[i].lock) { nonLockLastIdx = i; break; }
+        }
+        if (nonLockLastIdx !== -1) {
+            schedules[nonLockLastIdx].duration += (24 - total);
+        }
+    }
+
+    // がっこう🏫の直前の項目までの時間合計を計算
+    let beforeSchoolDuration = 0;
+    for (let i = 0; i < schoolIdx; i++) {
+        beforeSchoolDuration += schedules[i].duration;
+    }
+
+    // がっこう🏫の開始が絶対時刻の「8」になるように、全体の基準点（startHourOffset）を強制逆算
+    startHourOffset = (8 - beforeSchoolDuration + 24) % 24;
+    
+    // がっこう🏫の長さは絶対に7時間（15時 - 8時）
+    schedules[schoolIdx].duration = 7;
+}
+
 // --- 描画処理 ---
 function draw(draggedInfo = null) {
+    // 描画の直前に必ずがっこう🏫の位置を絶対固定化する
+    forceFixSchoolTime();
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#f5eedf';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -156,7 +190,7 @@ function draw(draggedInfo = null) {
             ctx.rotate(textAngle);
             
             ctx.fillStyle = (draggedInfo && draggedInfo.type === 'move' && draggedInfo.index === idx) ? 'rgba(0,0,0,0.3)' : 'white';
-            ctx.font = 'bold 24px sans-serif';
+            ctx.font = 'bold 17px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             if (!(draggedInfo && draggedInfo.type === 'move' && draggedInfo.index === idx)) {
@@ -166,11 +200,14 @@ function draw(draggedInfo = null) {
             
             let checkAngle = (textAngle - BASE_ANGLE) % (Math.PI * 2);
             if (checkAngle < 0) checkAngle += Math.PI * 2;
+            
+            let displayName = s.name;
+
             if (checkAngle > Math.PI && checkAngle < Math.PI * 2) {
                 ctx.rotate(Math.PI);
-                ctx.fillText(s.name, -RADIUS * 0.65, 0);
+                ctx.fillText(displayName, -RADIUS * 0.65, 0);
             } else {
-                ctx.fillText(s.name, RADIUS * 0.65, 0);
+                ctx.fillText(displayName, RADIUS * 0.65, 0);
             }
             ctx.restore();
         }
@@ -198,13 +235,16 @@ function draw(draggedInfo = null) {
         ctx.restore();
     }
 
-    // 2. 外側の時間文字盤の描画
-    ctx.font = 'bold 28px sans-serif';
+// 2. 外側の時間文字盤の描画（★12時間表記に修正）
+    ctx.font = 'bold 26px sans-serif'; // 数字のサイズも少しコンパクトに調整
     ctx.fillStyle = '#4a3c31';
     for (let h = 1; h <= 24; h++) {
         let angle = BASE_ANGLE + (h / 24) * Math.PI * 2;
+        
+        // 13〜24時を1〜12時に変換（12時と24時は「12」と表示）
         let displayNum = h % 12 === 0 ? 12 : h % 12;
-        let textRadius = RADIUS + 35;
+        
+        let textRadius = RADIUS + 30;
         let x = CENTER.x + Math.cos(angle) * textRadius;
         let y = CENTER.y + Math.sin(angle) * textRadius;
         ctx.textAlign = 'center';
@@ -213,8 +253,8 @@ function draw(draggedInfo = null) {
 
         let x1 = CENTER.x + Math.cos(angle) * RADIUS;
         let y1 = CENTER.y + Math.sin(angle) * RADIUS;
-        let x2 = CENTER.x + Math.cos(angle) * (RADIUS + 12);
-        let y2 = CENTER.y + Math.sin(angle) * (RADIUS + 12);
+        let x2 = CENTER.x + Math.cos(angle) * (RADIUS + 10);
+        let y2 = CENTER.y + Math.sin(angle) * (RADIUS + 10);
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
@@ -247,8 +287,8 @@ function draw(draggedInfo = null) {
 }
 
 // --- 操作・ドラッグ＆ドロップロジック ---
-let dragMode = null; // 'resize' または 'move'
-let pendingDragMode = null; // 長押し判定中に一時キープするモード
+let dragMode = null; 
+let pendingDragMode = null; 
 let dragIndex = -1; 
 let longPressTimer = null;
 let lastTapTime = 0;
@@ -298,11 +338,12 @@ function handleStart(clientX, clientY) {
     if (now - lastTapTime < 300) {
         clearTimeout(longPressTimer); longPressTimer = null;
         let idx = getScheduleIndexByHour(clickHour);
+        if (schedules[idx].lock) { alert("固定されている項目は分割できません"); return; }
         let newName = prompt("あたらしく追加する項目はなに？", "あさごはん");
         if (newName) {
             if (schedules[idx].duration > 0.5) {
                 schedules[idx].duration -= 0.5;
-                schedules.splice(idx + 1, 0, { name: newName, duration: 0.5, color: '#e57373' });
+                schedules.splice(idx + 1, 0, { name: newName, duration: 0.5, color: '#e57373', lock: false });
                 draw();
             } else { alert("時間がみじかすぎて追加できません"); }
         }
@@ -317,33 +358,42 @@ function handleStart(clientX, clientY) {
     let currentHour = startHourOffset;
     let hitBoundary = false;
     for (let i = 0; i < schedules.length; i++) {
+        let nextIdx = (i + 1) % schedules.length;
         currentHour += schedules[i].duration;
         let diff = Math.abs(clickHour - (currentHour % 24));
         if (diff > 12) diff = 24 - diff; 
 
         if (diff < 0.6) { 
+            if (schedules[i].lock || schedules[nextIdx].lock) {
+                return; 
+            }
             pendingDragMode = 'resize';
             dragIndex = i;
             hitBoundary = true;
             break;
         }
     }
+    
     if (!hitBoundary) {
+        if (schedules[targetIdx].lock) return;
         pendingDragMode = 'move';
         dragIndex = targetIdx;
     }
 
     longPressTimer = setTimeout(() => {
         if (!dragMode && schedules.length > 1) {
+            if (schedules[targetIdx].lock) return; 
             if (confirm(`「${schedules[targetIdx].name}」を消しますか？`)) {
                 let deletedDuration = schedules[targetIdx].duration;
-                if (targetIdx === 0) startHourOffset = (startHourOffset + deletedDuration) % 24;
+                
+                // 削除された時間枠を隣接する項目に仮で結合
                 schedules.splice(targetIdx, 1);
-                schedules[targetIdx % schedules.length].duration += deletedDuration;
+                let adjustIdx = targetIdx % schedules.length;
+                schedules[adjustIdx].duration += deletedDuration;
                 
                 pendingDragMode = null;
                 dragIndex = -1;
-                draw();
+                draw(); // この中で強制補正が走ります
             }
         }
         longPressTimer = null;
@@ -354,8 +404,6 @@ function handleMove(clientX, clientY) {
     if (!pendingDragMode || dragIndex === -1) return;
 
     const coords = getCanvasCoords(clientX, clientY);
-    
-    // わずかでも動いたら長押しを解除し、ドラッグモードに移行
     const moveDist = Math.sqrt((coords.x - lastMousePos.x)**2 + (coords.y - lastMousePos.y)**2);
     if (moveDist > 3 && !dragMode) {
         if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
@@ -379,10 +427,6 @@ function handleMove(clientX, clientY) {
 
         if (newDuration > 0.1 && newDuration < totalTwoDuration - 0.1) {
             let roundedDuration = Math.round(newDuration * 4) / 4;
-            if (dragIndex === schedules.length - 1) {
-                startHourOffset = (startHourOffset + (roundedDuration - schedules[dragIndex].duration)) % 24;
-                if (startHourOffset < 0) startHourOffset += 24;
-            }
             schedules[dragIndex].duration = roundedDuration;
             schedules[nextIndex].duration = Math.round((totalTwoDuration - roundedDuration) * 4) / 4;
             draw();
@@ -397,15 +441,9 @@ function handleEnd(clientX, clientY) {
         const clickHour = getHourFromCoords(lastMousePos.x, lastMousePos.y);
         let dropIndex = getScheduleIndexByHour(clickHour);
 
-        if (dropIndex !== dragIndex) {
+        if (dropIndex !== dragIndex && !schedules[dropIndex].lock) {
             const targetItem = schedules.splice(dragIndex, 1)[0];
-            if (dragIndex === 0) {
-                startHourOffset = (startHourOffset + targetItem.duration) % 24;
-            }
             schedules.splice(dropIndex, 0, targetItem);
-            if (dropIndex === 0) {
-                startHourOffset = (startHourOffset - targetItem.duration + 24) % 24;
-            }
         }
     }
 
