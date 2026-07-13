@@ -77,7 +77,7 @@ const badPresetRaw = [
     { name: 'したく・登校', start: '07:30', end: '08:00', color: '#cca625' },
     { name: '学校',         start: '08:00', end: '15:00', color: '#168344' },
     { name: '下校・外遊び', start: '15:00', end: '17:00', color: '#b75c24' },
-    { name: '宿題', start: '17:00', end: '17:30', color: '#592971' },
+    { name: '宿題',         start: '17:00', end: '17:30', color: '#592971' },
     { name: 'ゲーム',       start: '17:30', end: '19:00', color: '#9d226e' },
     { name: '夕食',         start: '19:00', end: '19:30', color: '#3fa442' },
     { name: 'テレビ',       start: '19:30', end: '20:30', color: '#9d226e' },
@@ -137,7 +137,6 @@ function draw(draggedInfo = null) {
         ctx.arc(CENTER.x, CENTER.y, RADIUS, startAngle, endAngle);
         ctx.closePath();
         
-        // 入れ替えドラッグ中のアイテムは少し透明にする
         if (draggedInfo && draggedInfo.type === 'move' && draggedInfo.index === idx) {
             ctx.fillStyle = 'rgba(150, 150, 150, 0.4)';
         } else {
@@ -178,7 +177,6 @@ function draw(draggedInfo = null) {
         currentHour += s.duration;
     });
 
-    // 入れ替えドラッグ中に、指の位置に半透明の影を追従させる（ドラッグ＆ドロップの視覚効果）
     if (draggedInfo && draggedInfo.type === 'move' && draggedInfo.currentPos) {
         ctx.save();
         ctx.beginPath();
@@ -200,7 +198,7 @@ function draw(draggedInfo = null) {
         ctx.restore();
     }
 
-    // 2. 外側の時間文字盤の描画（12時固定）
+    // 2. 外側の時間文字盤の描画
     ctx.font = 'bold 28px sans-serif';
     ctx.fillStyle = '#4a3c31';
     for (let h = 1; h <= 24; h++) {
@@ -249,7 +247,8 @@ function draw(draggedInfo = null) {
 }
 
 // --- 操作・ドラッグ＆ドロップロジック ---
-let dragMode = null; // 'resize'（長さ変更） または 'move'（入れ替え）
+let dragMode = null; // 'resize' または 'move'
+let pendingDragMode = null; // 長押し判定中に一時キープするモード
 let dragIndex = -1; 
 let longPressTimer = null;
 let lastTapTime = 0;
@@ -311,23 +310,10 @@ function handleStart(clientX, clientY) {
     }
     lastTapTime = now;
 
-    // 長押し（削除）
+    // 長押し（削除）の準備
     let targetIdx = getScheduleIndexByHour(clickHour);
     if (longPressTimer) clearTimeout(longPressTimer);
-    longPressTimer = setTimeout(() => {
-        if (!dragMode && schedules.length > 1) {
-            if (confirm(`「${schedules[targetIdx].name}」を消しますか？`)) {
-                let deletedDuration = schedules[targetIdx].duration;
-                if (targetIdx === 0) startHourOffset = (startHourOffset + deletedDuration) % 24;
-                schedules.splice(targetIdx, 1);
-                schedules[targetIdx % schedules.length].duration += deletedDuration;
-                draw();
-            }
-        }
-        longPressTimer = null;
-    }, 1000);
-
-    // 【判定】境界線タッチなら 'resize'、面タッチなら 'move' (入れ替え)
+    
     let currentHour = startHourOffset;
     let hitBoundary = false;
     for (let i = 0; i < schedules.length; i++) {
@@ -335,32 +321,53 @@ function handleStart(clientX, clientY) {
         let diff = Math.abs(clickHour - (currentHour % 24));
         if (diff > 12) diff = 24 - diff; 
 
-        if (diff < 0.6) { // 線の近くを触った場合
-            dragMode = 'resize';
+        if (diff < 0.6) { 
+            pendingDragMode = 'resize';
             dragIndex = i;
             hitBoundary = true;
-            clearTimeout(longPressTimer); longPressTimer = null;
             break;
         }
     }
-
-    // 境界線に触れていなければ、項目そのものの移動モードにする
     if (!hitBoundary) {
-        dragMode = 'move';
+        pendingDragMode = 'move';
         dragIndex = targetIdx;
     }
+
+    longPressTimer = setTimeout(() => {
+        if (!dragMode && schedules.length > 1) {
+            if (confirm(`「${schedules[targetIdx].name}」を消しますか？`)) {
+                let deletedDuration = schedules[targetIdx].duration;
+                if (targetIdx === 0) startHourOffset = (startHourOffset + deletedDuration) % 24;
+                schedules.splice(targetIdx, 1);
+                schedules[targetIdx % schedules.length].duration += deletedDuration;
+                
+                pendingDragMode = null;
+                dragIndex = -1;
+                draw();
+            }
+        }
+        longPressTimer = null;
+    }, 1000);
 }
 
 function handleMove(clientX, clientY) {
-    if (!dragMode || dragIndex === -1) return;
-    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    if (!pendingDragMode || dragIndex === -1) return;
 
     const coords = getCanvasCoords(clientX, clientY);
+    
+    // わずかでも動いたら長押しを解除し、ドラッグモードに移行
+    const moveDist = Math.sqrt((coords.x - lastMousePos.x)**2 + (coords.y - lastMousePos.y)**2);
+    if (moveDist > 3 && !dragMode) {
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        dragMode = pendingDragMode;
+    }
+
+    if (!dragMode) return; 
+
     const currentHour = getHourFromCoords(coords.x, coords.y);
     lastMousePos = coords;
 
     if (dragMode === 'resize') {
-        // 従来の長さ変更処理
         let scheduledStartHour = startHourOffset;
         for (let i = 0; i < dragIndex; i++) { scheduledStartHour += schedules[i].duration; }
         scheduledStartHour = scheduledStartHour % 24;
@@ -381,31 +388,21 @@ function handleMove(clientX, clientY) {
             draw();
         }
     } else if (dragMode === 'move') {
-        // 入れ替え中のプレビュー描画を呼び出す
         draw({ type: 'move', index: dragIndex, currentPos: coords });
     }
 }
 
 function handleEnd(clientX, clientY) {
     if (dragMode === 'move' && dragIndex !== -1) {
-        // ドロップされた場所の時間を取得して並び替える
         const clickHour = getHourFromCoords(lastMousePos.x, lastMousePos.y);
         let dropIndex = getScheduleIndexByHour(clickHour);
 
         if (dropIndex !== dragIndex) {
-            // 配列から掴んだ要素を抜き出す
             const targetItem = schedules.splice(dragIndex, 1)[0];
-            
-            // もし睡眠などの「全体の起点」になっていた最初の要素を動かした場合は、
-            // 起点となる時刻(startHourOffset)を次の要素の開始位置へとスライド補正する
             if (dragIndex === 0) {
                 startHourOffset = (startHourOffset + targetItem.duration) % 24;
             }
-            
-            // 指定の位置へ割り込ませる
             schedules.splice(dropIndex, 0, targetItem);
-
-            // もし移動した結果、新しい「一番最初の要素」になった場合は、その要素の前にあった要素の時間を起点に再計算
             if (dropIndex === 0) {
                 startHourOffset = (startHourOffset - targetItem.duration + 24) % 24;
             }
@@ -413,6 +410,7 @@ function handleEnd(clientX, clientY) {
     }
 
     dragMode = null;
+    pendingDragMode = null;
     dragIndex = -1;
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
     draw();
@@ -432,7 +430,5 @@ canvas.addEventListener('touchmove', (e) => {
 canvas.addEventListener('touchend', (e) => {
     if(e.changedTouches.length === 1) handleEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
 });
-
-</script>
-</body>
+</script></body>
 </html>
