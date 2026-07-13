@@ -2,659 +2,437 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>１日の生活リズム</title>
-<style>
-        /* --- [設定エリア：見た目の微調整] --- */
-        :root {
-            --handle-size: 14px; /* ここを大きくすると白丸が大きくなります */
-            --handle-color: #ffffff;
-            --handle-border: #4a3728;
-        }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>24時間せいかつリズム時計</title>
+    <style>
         body {
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-            background-color: #f3eedf;
-            margin: 0;
-            padding: 20px;
+            font-family: 'Hiragino Maru Gothic ProN', 'Comic Sans MS', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            color: #333;
+            background-color: #eaddca;
+            margin: 0;
+            padding: 10px;
             user-select: none;
             -webkit-user-select: none;
-        }
-
-        h1 {
-            font-size: 20px;
-            margin-bottom: 5px;
-            color: #5d4037;
-        }
-
-        .instruction {
-            font-size: 11px;
-            color: #6d4c41;
-            margin-bottom: 15px;
-            text-align: center;
-            background: rgba(255,255,255,0.9);
-            padding: 10px 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            line-height: 1.6;
-            max-width: 580px;
-        }
-
-        .container {
-            position: relative;
-            width: 600px;
-            height: 600px;
-            background-color: #fdfaf2;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .clock-board {
-            position: relative;
-            width: 520px;
-            height: 520px;
-        }
-
-        .svg-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform: rotate(-90deg);
-            z-index: 1;
-        }
-
-        .numeric-layer {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            z-index: 2;
-        }
-
-        .hour-label {
-            position: absolute;
-            font-weight: bold;
-            font-size: 16px;
-            color: #4a3728;
-            transform: translate(-50%, -50%);
-            text-shadow: 1px 1px 0px #fff, -1px -1px 0px #fff, 1px -1px 0px #fff, -1px 1px 0px #fff;
-        }
-
-        .center-circle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 170px;
-            height: 170px;
-            background-color: #fff;
-            border-radius: 50%;
-            border: 4px solid #cbbba0;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 3;
-        }
-
-        .center-top {
-            flex: 1;
-            background-color: #a3937b;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            color: #fff;
-            padding-bottom: 5px;
-        }
-        .center-bottom {
-            flex: 1;
-            background-color: #eaddc3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            color: #5d4037;
-            padding-top: 5px;
-        }
-
-        .icon-moon { font-size: 32px; transform: rotate(-10deg); }
-        .icon-house { font-size: 30px; }
-        .icon-sun { font-size: 34px; }
-        .icon-school { font-size: 30px; }
-
-        .labels-layer {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            z-index: 4;
-        }
-
-        .schedule-text {
-            position: absolute;
-            font-weight: bold;
-            font-size: 13px;
-            color: #fff;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8), 1px -1px 2px rgba(0,0,0,0.8), -1px 1px 2px rgba(0,0,0,0.8);
-            transform: translate(-50%, -50%);
-            white-space: nowrap;
-            text-align: center;
-        }
-        
-        .text-dark {
-            color: #222;
-            text-shadow: 1px 1px 2px #fff, -1px -1px 2px #fff, 1px -1px 2px #fff, -1px 1px 2px #fff;
-        }
-
-        .handles-layer {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        .handle {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background-color: #fff;
-            border: 3px solid #4a3728;
-            border-radius: 50%;
-            cursor: pointer;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             touch-action: none;
-            pointer-events: auto;
         }
-        .handle:hover, .handle.dragging {
-            transform: translate(-50%, -50%) scale(1.3);
-            background-color: #ffeb3b;
-        }
-
-        .swapping {
-            opacity: 0.4;
-        }
-
-        .modal {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-            z-index: 100;
-            width: 270px;
-            border: 3px solid #cbbba0;
-        }
-
-        .modal h3 {
-            margin-top: 0;
-            font-size: 14px;
-            color: #5d4037;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .modal-options {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            max-height: 320px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
-        .modal-btn {
-            padding: 8px;
-            border: none;
-            border-radius: 6px;
-            background-color: #f0f0f0;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .modal-btn:hover {
-            background-color: #e0e0e0;
-        }
-
-        .color-box {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
-            display: inline-block;
-        }
-
-        .close-btn {
-            margin-top: 10px;
+        #canvasContainer {
+            position: relative;
             width: 100%;
-            padding: 6px;
-            background: #9e9e9e;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
+            max-width: 600px;
+            aspect-ratio: 1 / 1;
         }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .preset-container {
+            margin-top: 10px;
+            display: flex;
+            gap: 15px;
+        }
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-bad { background-color: #a13d63; color: white; }
+        .btn-good { background-color: #3f7a5c; color: white; }
     </style>
 </head>
 <body>
 
-    <h1>🕒 １日の生活リズム</h1>
-    <div class="instruction">
-        <strong>【時間の伸縮】</strong> 【〇】をうごかす<br>
-        <strong>【活動の移動（順序変更）】</strong> タップしてそのまま動かす<br>
-        <strong>【追加・削除】</strong> 【ダブルタップ】で追加、【長押し】で消す。
+    <div id="canvasContainer">
+        <canvas id="clockCanvas" width="700" height="700"></canvas>
     </div>
 
-    <div class="container">
-        <div class="clock-board" id="clock-board">
-            
-            <svg class="svg-container" viewBox="0 0 520 520" id="svg-element">
-                <circle cx="260" cy="260" r="176" fill="none" stroke="#dbd3c2" stroke-width="2"/>
-                <g id="sectors-group"></g>
-            </svg>
-
-            <div class="center-circle">
-                <div class="center-top">
-                    <span class="icon-moon">🌙</span>
-                    <span class="icon-house">🏡</span>
-                </div>
-                <div class="center-bottom">
-                    <span class="icon-sun">☀️</span>
-                    <span class="icon-school">🏫</span>
-                </div>
-            </div>
-
-            <div id="labels-container" class="labels-layer"></div>
-            <div id="handles-container" class="handles-layer"></div>
-            <div id="numeric-labels-container" class="numeric-layer"></div>
-
-        </div>
+    <div class="preset-container">
+        <button class="btn btn-bad" onclick="loadPreset('bad')">✕ わるいリズム(初期データ)</button>
+        <button class="btn btn-good" onclick="loadPreset('good')">◯ よいリズム</button>
     </div>
 
-    <div class="modal" id="activity-modal">
-        <h3>新しい活動の枠を挿入する</h3>
-        <div class="modal-options">
-            <button class="modal-btn" onclick="insertNewActivity('すいみん', '#4776ad')"><span>すいみん</span><span class="color-box" style="background:#4776ad;"></span></button>
-            <button class="modal-btn" onclick="insertNewActivity('あさごはん', '#e67e22')"><span>あさごはん</span><span class="color-box" style="background:#e67e22;"></span></button>
-            <button class="modal-btn" onclick="insertNewActivity('テレビ', '#663399')"><span>テレビ</span><span class="color-box" style="background:#663399;"></span></button>
-            <button class="modal-btn" onclick="insertNewActivity('夕食', '#2ecc71')"><span>夕食</span><span class="color-box" style="background:#2ecc71;"></span></button>
-            <button class="modal-btn" onclick="insertNewActivity('ゲーム', '#b92b77')"><span>ゲーム</span><span class="color-box" style="background:#b92b77;"></span></button>
-            <button class="modal-btn" onclick="insertNewActivity('おふろ', '#5bc0de')"><span>おふろ</span><span class="color-box" style="background:#5bc0de;"></span></button>
-            <button class="modal-btn" onclick="insertNewActivity('明日のじゅんび', '#f1c40f')"><span class="text-dark">明日のじゅんび</span><span class="color-box" style="background:#f1c40f;"></span></button>
-            <button class="modal-btn" onclick="insertNewActivity('あそび', '#95a5a6')"><span>あそび</span><span class="color-box" style="background:#95a5a6;"></span></button>
-            <button class="modal-btn" onclick="insertNewActivity('その他', '#e74c3c')"><span>その他</span><span class="color-box" style="background:#e74c3c;"></span></button>
-        </div>
-        <button class="close-btn" onclick="closeModal()">キャンセル</button>
-    </div>
+<script>
+const canvas = document.getElementById('clockCanvas');
+const ctx = canvas.getContext('2d');
 
-    <script>
-        function t(h, m) { return h * 60 + m; }
+const CENTER = { x: 350, y: 350 };
+const RADIUS = 230; 
+const BASE_ANGLE = -Math.PI / 2; // 真上（12時／24時）
 
-        let schedule = [
-            { name: "すいみん", dur: 445, color: "#4776ad" },
-            { name: "したく・登校", dur: 45, color: "#cbd154" },
-            { name: "学校", dur: 455, color: "#1e824c" },
-            { name: "下校・外遊び", dur: 120, color: "#d35400" },
-            { name: "宿題", dur: 45, color: "#663399" },
-            { name: "夕食", dur: 45, color: "#2ecc71" },
-            { name: "テレビ", dur: 90, color: "#b92b77" },
-            { name: "おふろ", dur: 30, color: "#5bc0de" },
-            { name: "ゲーム", dur: 165, color: "#b92b77" }
-        ];
+let schedules = [];
+let startHourOffset = 0; // 全体の開始絶対時刻
 
-        // ✨ 変更点：開始時刻を変数として保持し、動かせるようにしました
-        let globalStart = t(23, 45); 
+// ==========================================
+// ★ 初期時間割の指定（24時間表記）
+// ==========================================
+const badPresetRaw = [
+    { name: 'すいみん',     start: '23:45', end: '07:30', color: '#4c73a4' },
+    { name: 'したく・登校', start: '07:30', end: '08:00', color: '#cca625' },
+    { name: '学校',         start: '08:00', end: '15:00', color: '#168344' },
+    { name: '下校・外遊び', start: '15:00', end: '17:00', color: '#b75c24' },
+    { name: '宿題', start: '17:00', end: '17:30', color: '#592971' },
+    { name: 'ゲーム',       start: '17:30', end: '19:00', color: '#9d226e' },
+    { name: '夕食',         start: '19:00', end: '19:30', color: '#3fa442' },
+    { name: 'テレビ',       start: '19:30', end: '20:30', color: '#9d226e' },
+    { name: '入浴',         start: '20:30', end: '21:00', color: '#54a3aa' },
+    { name: 'ゲーム',       start: '21:00', end: '23:45', color: '#9d226e' }
+];
 
-        function refreshAbsoluteTimes() {
-            let currentStart = globalStart; 
-            schedule.forEach(item => {
-                item.start = currentStart;
-                item.end = (currentStart + item.dur) % 1440;
-                currentStart = item.end;
-            });
+const goodPresetRaw = [
+    { name: 'すいみん',     start: '21:00', end: '06:30', color: '#4c73a4' },
+    { name: 'あさごはん',   start: '06:30', end: '07:00', color: '#3fa442' },
+    { name: 'したく・登校', start: '07:00', end: '08:00', color: '#cca625' },
+    { name: '学校',         start: '08:00', end: '15:00', color: '#168344' },
+    { name: '下校・外遊び', start: '15:00', end: '16:30', color: '#b75c24' },
+    { name: 'しゅくだい',   start: '16:30', end: '17:30', color: '#592971' },
+    { name: 'ゆうはん',     start: '17:30', end: '18:30', color: '#3fa442' },
+    { name: 'おふろ',       start: '18:30', end: '19:30', color: '#54a3aa' },
+    { name: 'のんびり',     start: '19:30', end: '21:00', color: '#9d226e' }
+];
+
+function convertRawToSchedules(rawList) {
+    return rawList.map(item => {
+        const [sH, sM] = item.start.split(':').map(Number);
+        const [eH, eM] = item.end.split(':').map(Number);
+        let startDec = sH + sM / 60;
+        let endDec = eH + eM / 60;
+        let duration = endDec - startDec;
+        if (duration <= 0) duration += 24; 
+        return { name: item.name, duration: duration, color: item.color };
+    });
+}
+
+function loadPreset(type) {
+    const raw = type === 'bad' ? badPresetRaw : goodPresetRaw;
+    const [h, m] = raw[0].start.split(':').map(Number);
+    startHourOffset = h + m / 60;
+    schedules = convertRawToSchedules(raw);
+    draw();
+}
+
+loadPreset('bad');
+
+// --- 描画処理 ---
+function draw(draggedInfo = null) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#f5eedf';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    let currentHour = startHourOffset;
+
+    // 1. 円グラフ（扇形）の描画
+    schedules.forEach((s, idx) => {
+        let startAngle = BASE_ANGLE + (currentHour / 24) * Math.PI * 2;
+        let endAngle = startAngle + (s.duration / 24) * Math.PI * 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(CENTER.x, CENTER.y);
+        ctx.arc(CENTER.x, CENTER.y, RADIUS, startAngle, endAngle);
+        ctx.closePath();
+        
+        // 入れ替えドラッグ中のアイテムは少し透明にする
+        if (draggedInfo && draggedInfo.type === 'move' && draggedInfo.index === idx) {
+            ctx.fillStyle = 'rgba(150, 150, 150, 0.4)';
+        } else {
+            ctx.fillStyle = s.color;
         }
+        ctx.fill();
+        
+        ctx.strokeStyle = '#f5eedf';
+        ctx.lineWidth = 3;
+        ctx.stroke();
 
-        const board = document.getElementById('clock-board');
-        const sectorsGroup = document.getElementById('sectors-group');
-        const labelsContainer = document.getElementById('labels-container');
-        const handlesContainer = document.getElementById('handles-container');
-        const numericContainer = document.getElementById('numeric-labels-container');
-        const modal = document.getElementById('activity-modal');
-
-        let activeTargetIndex = null;
-        let longPressTimer = null;
-
-        function deployNumericLabels() {
-            numericContainer.innerHTML = "";
-            const radius = 242;
-            const center = 260;
-            for (let hour = 0; hour < 24; hour++) {
-                let angle = (hour * 15 - 90) * (Math.PI / 180);
-                let x = center + radius * Math.cos(angle);
-                let y = center + radius * Math.sin(angle);
-                let div = document.createElement('div');
-                div.className = 'hour-label';
-                div.style.left = x + 'px';
-                div.style.top = y + 'px';
-                let displayHour = hour === 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-                div.innerText = displayHour;
-                numericContainer.appendChild(div);
-            }
-        }
-
-        function getCoordinatesForPercent(percent, radius) {
-            return [
-                260 + radius * Math.cos(2 * Math.PI * percent),
-                260 + radius * Math.sin(2 * Math.PI * percent)
-            ];
-        }
-
-        function getDuration(start, end) {
-            if (end >= start) return end - start;
-            return (1440 - start) + end;
-        }
-
-        function getMinutesFromCoordinates(clientX, clientY) {
-            let rect = board.getBoundingClientRect();
-            let centerX = rect.left + rect.width / 2;
-            let centerY = rect.top + rect.height / 2;
-            let angle = Math.atan2(clientY - centerY, clientX - centerX);
-            let degrees = angle * (180 / Math.PI) + 90;
-            if (degrees < 0) degrees += 360;
-            let mins = Math.round((degrees / 360) * 1440);
-            return mins >= 1440 ? 0 : mins;
-        }
-
-        function getIndexAtMinutes(mins) {
-            for (let i = 0; i < schedule.length; i++) {
-                let s = schedule[i].start;
-                let e = schedule[i].end;
-                if (s < e) {
-                    if (mins >= s && mins < e) return i;
-                } else {
-                    if (mins >= s || mins < e) return i;
-                }
-            }
-            return -1;
-        }
-
-        function renderChart() {
-            refreshAbsoluteTimes();
-            sectorsGroup.innerHTML = "";
-            labelsContainer.innerHTML = "";
-            handlesContainer.innerHTML = "";
-
-            const center = 260;
-            const r = 176;
-
-            schedule.forEach((item, index) => {
-                let duration = item.dur;
-                if (duration <= 0) return;
-
-                let segments = [];
-                if (item.start > item.end) {
-                    segments.push({ s: item.start, e: 1440 });
-                    segments.push({ s: 0, e: item.end });
-                } else {
-                    segments.push({ s: item.start, e: item.end });
-                }
-
-                segments.forEach(seg => {
-                    let startPct = seg.s / 1440;
-                    let endPct = seg.e / 1440;
-                    const [startX, startY] = getCoordinatesForPercent(startPct, r);
-                    const [endX, endY] = getCoordinatesForPercent(endPct, r);
-                    const largeArcFlag = (endPct - startPct) > 0.5 ? 1 : 0;
-                    
-                    let d = `M ${startX} ${startY} A ${r} ${r} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
-                    if (seg.s === 0 && seg.e === 1440) {
-                        d = `M 260 ${260-r} A ${r} ${r} 0 1 1 259.99 ${260-r} Z`;
-                    }
-
-                    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                    path.setAttribute("d", d);
-                    path.setAttribute("fill", "none");
-                    path.setAttribute("stroke", item.color);
-                    path.setAttribute("stroke-width", "110");
-                    path.style.cursor = "grab";
-
-                    path.addEventListener('dblclick', (e) => {
-                        e.stopPropagation(); e.preventDefault(); openModal(index);
-                    });
-
-                    let dragStarted = false;
-                    let initialX = 0, initialY = 0;
-
-                    const onMove = (me) => {
-                        let cx = me.clientX || (me.touches && me.touches[0].clientX);
-                        let cy = me.clientY || (me.touches && me.touches[0].clientY);
-                        if (!dragStarted) {
-                            if (Math.abs(cx - initialX) > 8 || Math.abs(cy - initialY) > 8) {
-                                dragStarted = true;
-                                path.classList.add('swapping');
-                                if (longPressTimer) clearTimeout(longPressTimer);
-                            }
-                        }
-                    };
-
-                    const onEnd = (ee) => {
-                        window.removeEventListener('mousemove', onMove);
-                        window.removeEventListener('mouseup', onEnd);
-                        window.removeEventListener('touchmove', onMove);
-                        window.removeEventListener('touchend', onEnd);
-                        if (longPressTimer) clearTimeout(longPressTimer);
-
-                        if (dragStarted) {
-                            path.classList.remove('swapping');
-                            let endX = ee.clientX || (ee.changedTouches && ee.changedTouches[0].clientX);
-                            let endY = ee.clientY || (ee.changedTouches && ee.changedTouches[0].clientY);
-                            let currentMins = getMinutesFromCoordinates(endX, endY);
-                            let targetIdx = getIndexAtMinutes(currentMins);
-
-                            if (targetIdx !== -1 && targetIdx !== index) {
-                                let movingItem = schedule.splice(index, 1)[0];
-                                schedule.splice(targetIdx, 0, movingItem);
-                                renderChart();
-                            }
-                        }
-                    };
-
-                    const startPress = (e) => {
-                        initialX = e.clientX || (e.touches && e.touches[0].clientX);
-                        initialY = e.clientY || (e.touches && e.touches[0].clientY);
-                        dragStarted = false;
-
-                        longPressTimer = setTimeout(() => {
-                            if (!dragStarted) {
-                                deleteActivity(index);
-                            }
-                        }, 800);
-
-                        window.addEventListener('mousemove', onMove);
-                        window.addEventListener('mouseup', onEnd);
-                        window.addEventListener('touchmove', onMove, { passive: true });
-                        window.addEventListener('touchend', onEnd);
-                    };
-
-                    path.addEventListener('mousedown', startPress);
-                    path.addEventListener('touchstart', startPress, { passive: true });
-
-                    sectorsGroup.appendChild(path);
-                });
-
-                let midMin = item.start + duration / 2;
-                if (midMin >= 1440) midMin -= 1440;
-                let midPct = midMin / 1440;
-
-                let textAngle = (midPct * 360 - 90) * (Math.PI / 180);
-                let tx = center + 175 * Math.cos(textAngle);
-                let ty = center + 175 * Math.sin(textAngle);
-
-                let label = document.createElement('div');
-                label.className = 'schedule-text';
-                if (["したく・登校", "夕食", "あさごはん", "学校", "つぎの日の準備"].includes(item.name)) {
-                    label.classList.add('text-dark');
-                }
-                label.style.left = tx + 'px';
-                label.style.top = ty + 'px';
-                label.innerText = item.name;
-                
-                if (duration < 30) label.style.fontSize = '10px';
-                if (duration >= 20) labelsContainer.appendChild(label);
-
-                let handlePct = item.end / 1440;
-                let handleAngle = (handlePct * 360 - 90) * (Math.PI / 180);
-                let hx = center + 176 * Math.cos(handleAngle);
-                let hy = center + 176 * Math.sin(handleAngle);
-
-                let handle = document.createElement('div');
-                handle.className = 'handle';
-                handle.style.left = hx + 'px';
-                handle.style.top = hy + 'px';
-
-                setupDragEvent(handle, index);
-                handlesContainer.appendChild(handle);
-            });
-        }
-
-        function setupDragEvent(handle, index) {
-            function moveHandler(e) {
-                e.preventDefault();
-                let clientX = e.clientX || (e.touches && e.touches[0].clientX);
-                let clientY = e.clientY || (e.touches && e.touches[0].clientY);
-                let targetMin = getMinutesFromCoordinates(clientX, clientY);
-                targetMin = Math.round(targetMin / 15) * 15;
-                if (targetMin >= 1440) targetMin = 0;
-
-                let nextIndex = (index + 1) % schedule.length;
-                
-                let currentStart = schedule[index].start;
-                let nextEnd = schedule[nextIndex].end;
-
-                let newCurrentDur = getDuration(currentStart, targetMin);
-                let newNextDur = getDuration(targetMin, nextEnd);
-
-                if (newCurrentDur >= 15 && newNextDur >= 15) {
-                    schedule[index].dur = newCurrentDur;
-                    schedule[nextIndex].dur = newNextDur;
-                    
-                    // ✨ 変更点：一番最後の活動と最初の活動の間の境界を動かした時、全体の開始時刻を更新する
-                    if (index === schedule.length - 1) {
-                        globalStart = targetMin;
-                    }
-                    
-                    renderChart();
-                }
-            }
-
-            function stopHandler() {
-                handle.classList.remove('dragging');
-                window.removeEventListener('mousemove', moveHandler);
-                window.removeEventListener('mouseup', stopHandler);
-                window.removeEventListener('touchmove', moveHandler);
-                window.removeEventListener('touchend', stopHandler);
-            }
-
-            handle.addEventListener('mousedown', (e) => {
-                if (e.button !== 0) return;
-                e.preventDefault();
-                handle.classList.add('dragging');
-                window.addEventListener('mousemove', moveHandler);
-                window.addEventListener('mouseup', stopHandler);
-            });
-
-            handle.addEventListener('touchstart', (e) => {
-                handle.classList.add('dragging');
-                window.addEventListener('touchmove', moveHandler, { passive: false });
-                window.addEventListener('touchend', stopHandler);
-            });
-        }
-
-        function openModal(index) {
-            activeTargetIndex = index;
-            modal.style.display = 'block';
-        }
-
-        function closeModal() {
-            modal.style.display = 'none';
-            activeTargetIndex = null;
-        }
-
-        function insertNewActivity(name, color) {
-            if (activeTargetIndex !== null) {
-                let target = schedule[activeTargetIndex];
-                if (target.dur > 45) {
-                    target.dur -= 30;
-                    schedule.splice(activeTargetIndex + 1, 0, {
-                        dur: 30,
-                        name: name,
-                        color: color
-                    });
-                } else {
-                    target.name = name;
-                    target.color = color;
-                }
-                renderChart();
-                closeModal();
-            }
-        }
-
-        function deleteActivity(index) {
-            if (schedule.length <= 1) return;
-            let removed = schedule[index];
-            let prevIndex = (index - 1 + schedule.length) % schedule.length;
-            schedule[prevIndex].dur += removed.dur;
+        // 文字描画
+        if (s.duration > 0.24) { 
+            ctx.save();
+            let textAngle = startAngle + (s.duration / 24) * Math.PI;
+            ctx.translate(CENTER.x, CENTER.y);
+            ctx.rotate(textAngle);
             
-            // ✨ 変更点：一番最初の活動を削除した時、スタート地点の時刻もずらす
-            if (index === 0) {
-                globalStart = (globalStart + removed.dur) % 1440;
+            ctx.fillStyle = (draggedInfo && draggedInfo.type === 'move' && draggedInfo.index === idx) ? 'rgba(0,0,0,0.3)' : 'white';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            if (!(draggedInfo && draggedInfo.type === 'move' && draggedInfo.index === idx)) {
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 6;
             }
             
-            schedule.splice(index, 1);
-            renderChart();
-        }
-
-        document.getElementById('sectors-group').addEventListener('touchend', function(e) {
-            let now = new Date().getTime();
-            let lastTouch = this.lastTouch || 0;
-            let delta = now - lastTouch;
-            if (delta < 300 && delta > 0) {
-                let path = e.target;
-                if (path && path.tagName === 'path') {
-                    path.dispatchEvent(new Event('dblclick'));
-                }
+            let checkAngle = (textAngle - BASE_ANGLE) % (Math.PI * 2);
+            if (checkAngle < 0) checkAngle += Math.PI * 2;
+            if (checkAngle > Math.PI && checkAngle < Math.PI * 2) {
+                ctx.rotate(Math.PI);
+                ctx.fillText(s.name, -RADIUS * 0.65, 0);
+            } else {
+                ctx.fillText(s.name, RADIUS * 0.65, 0);
             }
-            this.lastTouch = now;
-        });
+            ctx.restore();
+        }
+        currentHour += s.duration;
+    });
 
-        window.onload = function() {
-            deployNumericLabels();
-            renderChart();
-        };
-    </script>
+    // 入れ替えドラッグ中に、指の位置に半透明の影を追従させる（ドラッグ＆ドロップの視覚効果）
+    if (draggedInfo && draggedInfo.type === 'move' && draggedInfo.currentPos) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(CENTER.x, CENTER.y);
+        let dragAngleWidth = (schedules[draggedInfo.index].duration / 24) * Math.PI * 2;
+        let mouseAngle = Math.atan2(draggedInfo.currentPos.y - CENTER.y, draggedInfo.currentPos.x - CENTER.x);
+        ctx.arc(CENTER.x, CENTER.y, RADIUS * 0.9, mouseAngle - dragAngleWidth/2, mouseAngle + dragAngleWidth/2);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("🚚 " + schedules[draggedInfo.index].name, draggedInfo.currentPos.x, draggedInfo.currentPos.y - 20);
+        ctx.restore();
+    }
+
+    // 2. 外側の時間文字盤の描画（12時固定）
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillStyle = '#4a3c31';
+    for (let h = 1; h <= 24; h++) {
+        let angle = BASE_ANGLE + (h / 24) * Math.PI * 2;
+        let displayNum = h % 12 === 0 ? 12 : h % 12;
+        let textRadius = RADIUS + 35;
+        let x = CENTER.x + Math.cos(angle) * textRadius;
+        let y = CENTER.y + Math.sin(angle) * textRadius;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(displayNum, x, y);
+
+        let x1 = CENTER.x + Math.cos(angle) * RADIUS;
+        let y1 = CENTER.y + Math.sin(angle) * RADIUS;
+        let x2 = CENTER.x + Math.cos(angle) * (RADIUS + 12);
+        let y2 = CENTER.y + Math.sin(angle) * (RADIUS + 12);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = '#4a3c31';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+
+    // 3. 中央の丸窓
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(CENTER.x, CENTER.y, RADIUS * 0.36, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#cca625'; 
+    ctx.stroke();
+    ctx.clip();
+    ctx.fillStyle = '#7a736d'; 
+    ctx.fillRect(CENTER.x - 150, CENTER.y - 150, 300, 150);
+    ctx.fillStyle = '#eae0cb'; 
+    ctx.fillRect(CENTER.x - 150, CENTER.y, 300, 150);
+    ctx.font = '42px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🌙', CENTER.x - 25, CENTER.y - 40); 
+    ctx.fillText('☀️', CENTER.x + 25, CENTER.y + 40);  
+    ctx.restore();
+}
+
+// --- 操作・ドラッグ＆ドロップロジック ---
+let dragMode = null; // 'resize'（長さ変更） または 'move'（入れ替え）
+let dragIndex = -1; 
+let longPressTimer = null;
+let lastTapTime = 0;
+let lastMousePos = { x: 0, y: 0 };
+
+function getCanvasCoords(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+}
+
+function getHourFromCoords(x, y) {
+    let dx = x - CENTER.x;
+    let dy = y - CENTER.y;
+    let angle = Math.atan2(dy, dx) - BASE_ANGLE;
+    while (angle < 0) angle += Math.PI * 2;
+    while (angle >= Math.PI * 2) angle -= Math.PI * 2;
+    return (angle / (Math.PI * 2)) * 24;
+}
+
+function getScheduleIndexByHour(targetHour) {
+    let currentHour = startHourOffset;
+    for (let i = 0; i < schedules.length; i++) {
+        let start = currentHour % 24;
+        let end = (currentHour + schedules[i].duration) % 24;
+        if (start < end) {
+            if (targetHour >= start && targetHour < end) return i;
+        } else {
+            if (targetHour >= start || targetHour < end) return i;
+        }
+        currentHour += schedules[i].duration;
+    }
+    return schedules.length - 1;
+}
+
+function handleStart(clientX, clientY) {
+    const coords = getCanvasCoords(clientX, clientY);
+    const dist = Math.sqrt((coords.x - CENTER.x)**2 + (coords.y - CENTER.y)**2);
+    if (dist > RADIUS + 60 || dist < RADIUS * 0.2) return;
+
+    const clickHour = getHourFromCoords(coords.x, coords.y);
+    lastMousePos = coords;
+    
+    // ダブルタップ（追加）
+    const now = Date.now();
+    if (now - lastTapTime < 300) {
+        clearTimeout(longPressTimer); longPressTimer = null;
+        let idx = getScheduleIndexByHour(clickHour);
+        let newName = prompt("あたらしく追加する項目はなに？", "あさごはん");
+        if (newName) {
+            if (schedules[idx].duration > 0.5) {
+                schedules[idx].duration -= 0.5;
+                schedules.splice(idx + 1, 0, { name: newName, duration: 0.5, color: '#e57373' });
+                draw();
+            } else { alert("時間がみじかすぎて追加できません"); }
+        }
+        lastTapTime = now; return;
+    }
+    lastTapTime = now;
+
+    // 長押し（削除）
+    let targetIdx = getScheduleIndexByHour(clickHour);
+    if (longPressTimer) clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(() => {
+        if (!dragMode && schedules.length > 1) {
+            if (confirm(`「${schedules[targetIdx].name}」を消しますか？`)) {
+                let deletedDuration = schedules[targetIdx].duration;
+                if (targetIdx === 0) startHourOffset = (startHourOffset + deletedDuration) % 24;
+                schedules.splice(targetIdx, 1);
+                schedules[targetIdx % schedules.length].duration += deletedDuration;
+                draw();
+            }
+        }
+        longPressTimer = null;
+    }, 1000);
+
+    // 【判定】境界線タッチなら 'resize'、面タッチなら 'move' (入れ替え)
+    let currentHour = startHourOffset;
+    let hitBoundary = false;
+    for (let i = 0; i < schedules.length; i++) {
+        currentHour += schedules[i].duration;
+        let diff = Math.abs(clickHour - (currentHour % 24));
+        if (diff > 12) diff = 24 - diff; 
+
+        if (diff < 0.6) { // 線の近くを触った場合
+            dragMode = 'resize';
+            dragIndex = i;
+            hitBoundary = true;
+            clearTimeout(longPressTimer); longPressTimer = null;
+            break;
+        }
+    }
+
+    // 境界線に触れていなければ、項目そのものの移動モードにする
+    if (!hitBoundary) {
+        dragMode = 'move';
+        dragIndex = targetIdx;
+    }
+}
+
+function handleMove(clientX, clientY) {
+    if (!dragMode || dragIndex === -1) return;
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+
+    const coords = getCanvasCoords(clientX, clientY);
+    const currentHour = getHourFromCoords(coords.x, coords.y);
+    lastMousePos = coords;
+
+    if (dragMode === 'resize') {
+        // 従来の長さ変更処理
+        let scheduledStartHour = startHourOffset;
+        for (let i = 0; i < dragIndex; i++) { scheduledStartHour += schedules[i].duration; }
+        scheduledStartHour = scheduledStartHour % 24;
+
+        let nextIndex = (dragIndex + 1) % schedules.length;
+        let totalTwoDuration = schedules[dragIndex].duration + schedules[nextIndex].duration;
+        let newDuration = currentHour - scheduledStartHour;
+        while (newDuration < 0) newDuration += 24;
+
+        if (newDuration > 0.1 && newDuration < totalTwoDuration - 0.1) {
+            let roundedDuration = Math.round(newDuration * 4) / 4;
+            if (dragIndex === schedules.length - 1) {
+                startHourOffset = (startHourOffset + (roundedDuration - schedules[dragIndex].duration)) % 24;
+                if (startHourOffset < 0) startHourOffset += 24;
+            }
+            schedules[dragIndex].duration = roundedDuration;
+            schedules[nextIndex].duration = Math.round((totalTwoDuration - roundedDuration) * 4) / 4;
+            draw();
+        }
+    } else if (dragMode === 'move') {
+        // 入れ替え中のプレビュー描画を呼び出す
+        draw({ type: 'move', index: dragIndex, currentPos: coords });
+    }
+}
+
+function handleEnd(clientX, clientY) {
+    if (dragMode === 'move' && dragIndex !== -1) {
+        // ドロップされた場所の時間を取得して並び替える
+        const clickHour = getHourFromCoords(lastMousePos.x, lastMousePos.y);
+        let dropIndex = getScheduleIndexByHour(clickHour);
+
+        if (dropIndex !== dragIndex) {
+            // 配列から掴んだ要素を抜き出す
+            const targetItem = schedules.splice(dragIndex, 1)[0];
+            
+            // もし睡眠などの「全体の起点」になっていた最初の要素を動かした場合は、
+            // 起点となる時刻(startHourOffset)を次の要素の開始位置へとスライド補正する
+            if (dragIndex === 0) {
+                startHourOffset = (startHourOffset + targetItem.duration) % 24;
+            }
+            
+            // 指定の位置へ割り込ませる
+            schedules.splice(dropIndex, 0, targetItem);
+
+            // もし移動した結果、新しい「一番最初の要素」になった場合は、その要素の前にあった要素の時間を起点に再計算
+            if (dropIndex === 0) {
+                startHourOffset = (startHourOffset - targetItem.duration + 24) % 24;
+            }
+        }
+    }
+
+    dragMode = null;
+    dragIndex = -1;
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    draw();
+}
+
+// イベント登録
+canvas.addEventListener('mousedown', (e) => handleStart(e.clientX, e.clientY));
+window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', (e) => handleEnd(e.clientX, e.clientY));
+
+canvas.addEventListener('touchstart', (e) => {
+    if(e.touches.length === 1) handleStart(e.touches[0].clientX, e.touches[0].clientY);
+});
+canvas.addEventListener('touchmove', (e) => {
+    if(e.touches.length === 1) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+});
+canvas.addEventListener('touchend', (e) => {
+    if(e.changedTouches.length === 1) handleEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+});
+
+</script>
 </body>
 </html>
